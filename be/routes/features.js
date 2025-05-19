@@ -107,4 +107,24 @@ router.delete('/:id', (req, res) => {
   });
 });
 
+
+
+// Get images for a specific feature
+router.get('/:id/images', (req, res) => {
+    Image.findByFeatureId(req.params.id, (err, images) => {
+      if (err) {
+        return res.status(500).json({ error: 'Error retrieving images' });
+      }
+      
+      // Add full URL path to each image
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const imagesWithUrls = images.map(image => ({
+        ...image,
+        url: `${baseUrl}/uploads/${image.filename}`
+      }));
+      
+      res.json(imagesWithUrls);
+    });
+  });
+
 module.exports = router;

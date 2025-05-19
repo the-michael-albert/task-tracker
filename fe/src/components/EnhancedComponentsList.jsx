@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Folder, File, ChevronDown, ChevronRight, Trash2, Plus } from 'lucide-react';
-import MockupScreengrabs from './MockupScreengrabs';
+import ImageGallery from './ImageGallery';
 import { 
   createComponent, 
   deleteComponent, 
   addChildComponent,
-  deleteChildComponent 
+  deleteChildComponent,
+  fetchFeatureImages,
+  uploadImage,
+  deleteImage
 } from '../api';
+import { useFeatures } from '../context/FeatureContext';
+
 
 const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChild }) => {
   const [expandedComponents, setExpandedComponents] = useState({});
@@ -93,6 +98,45 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
   });
   const [selectedParentId, setSelectedParentId] = useState(null);
   const [error, setError] = useState('');
+  const [images, setImages] = useState([]);
+  const { currentFeature } = useFeatures();
+  
+  // Load images when feature changes
+  useEffect(() => {
+    if (!currentFeature) return;
+    
+    const loadImages = async () => {
+      try {
+        const imagesData = await fetchFeatureImages(currentFeature._id);
+        setImages(imagesData);
+      } catch (error) {
+        console.error('Error loading images:', error);
+      }
+    };
+    
+    loadImages();
+  }, [currentFeature]);
+  
+  const handleAddImage = async (formData) => {
+    try {
+      const newImage = await uploadImage(formData);
+      setImages(prevImages => [...prevImages, newImage]);
+      return newImage;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+  
+  const handleDeleteImage = async (id) => {
+    try {
+      await deleteImage(id);
+      setImages(prevImages => prevImages.filter(img => img._id !== id));
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      throw error;
+    }
+  };
   
   const handleSelect = (id) => {
     setSelectedComponents(prev => {
@@ -294,7 +338,10 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
       </div>
       
       <div className="col-span-1">
-        <MockupScreengrabs />
+      <ImageGallery 
+          images={images}
+          onAddImage={handleAddImage}
+          onDeleteImage={handleDeleteImage} />
       </div>
     </div>
   );

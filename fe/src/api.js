@@ -124,3 +124,27 @@ export const deleteDatabaseChange = async (id) => {
   const response = await api.delete(`/database-changes/${id}`);
   return response.data;
 };
+
+export const fetchImages = async () => {
+  const response = await api.get('/images');
+  return response.data;
+};
+
+export const fetchFeatureImages = async (featureId) => {
+  const response = await api.get(`/features/${featureId}/images`);
+  return response.data;
+};
+
+export const uploadImage = async (formData) => {
+  const response = await api.post('/images', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const deleteImage = async (id) => {
+  const response = await api.delete(`/images/${id}`);
+  return response.data;
+};
