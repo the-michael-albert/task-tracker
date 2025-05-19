@@ -1,0 +1,6 @@
+{"method":"POST","path":"/api/auth/endpoint","queryParams":[],"requestBody":"{\n  \"json\": {}\n}","responseBody":"{\n  \"json\": {}\n}","createdAt":{"$$date":1747600428665},"updatedAt":{"$$date":1747600428665},"_id":"qt2QfiHEHXxK1Erv"}
+{"method":"GET","path":"/api/auth/endpoint","queryParams":[{"key":"sort","value":"true"},{"key":"limit","value":"10"},{"key":"filter","value":"org"}],"requestBody":"{}","responseBody":"{}","createdAt":{"$$date":1747600428665},"updatedAt":{"$$date":1747600428665},"_id":"BYU8vEyzTp5tYDaP"}
+{"method":"GET","path":"/api/auth/endpoint","createdAt":{"$$date":1747600474759},"updatedAt":{"$$date":1747600474759},"_id":"ap59MavlCW7dRY4s"}
+{"$$deleted":true,"_id":"BYU8vEyzTp5tYDaP"}
+{"$$deleted":true,"_id":"qt2QfiHEHXxK1Erv"}
+{"$$deleted":true,"_id":"ap59MavlCW7dRY4s"}
