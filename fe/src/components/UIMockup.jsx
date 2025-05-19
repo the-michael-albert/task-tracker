@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
-const UIMockup = () => {
-  const [assignTaskOpen, setAssignTaskOpen] = useState(false);
-
+const UIMockup = ({ onExternalLinkClick }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold">UI Mockup</h2>
-        <button className="btn btn-sm btn-ghost">
+        <button 
+          className="btn btn-sm btn-ghost"
+          onClick={onExternalLinkClick}
+        >
           <ExternalLink size={16} />
         </button>
       </div>

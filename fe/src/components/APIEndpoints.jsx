@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ExternalLink, Plus, ArrowUpDown, MoreVertical } from 'lucide-react';
 
-const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint }) => {
+const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLinkClick }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState({
     method: 'GET',
@@ -19,7 +19,10 @@ const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint }) => {
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold">API Endpoints</h2>
-        <button className="btn btn-sm btn-ghost">
+        <button 
+          className="btn btn-sm btn-ghost"
+          onClick={onExternalLinkClick}
+        >
           <ExternalLink size={16} />
         </button>
       </div>

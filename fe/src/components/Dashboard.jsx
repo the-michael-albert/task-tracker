@@ -5,6 +5,7 @@ import DatabaseChanges from './DatabaseChanges';
 import EnhancedComponentsList from './EnhancedComponentsList';
 import EndpointDetail from './EndpointDetail';
 import NoFeatureSelected from './NoFeatureSelected';
+import MockupScreengrabs from './MockupScreengrabs';
 import { 
   createEndpoint, 
   updateEndpoint, 
@@ -17,15 +18,22 @@ import {
 import { ArrowUp } from 'lucide-react';
 import { useFeatures } from '../context/FeatureContext';
 
+// Define view types for better tracking
+const VIEW_TYPES = {
+  COMPONENTS: 'components',
+  ENDPOINT_DETAIL: 'endpoint_detail',
+  MOCKUP: 'mockup'
+};
+
 const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints, databaseChanges: initialDatabaseChanges, setEndpoints, setDatabaseChanges, setComponents }) => {
   const { currentFeature } = useFeatures();
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
-  const [showComponentsList, setShowComponentsList] = useState(true);
+  const [currentView, setCurrentView] = useState(VIEW_TYPES.COMPONENTS);
   
   const [components, setLocalComponents] = useState(initialComponents);
   const [endpoints, setLocalEndpoints] = useState(initialEndpoints);
   const [databaseChanges, setLocalDatabaseChanges] = useState(initialDatabaseChanges);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Load data specific to the selected feature
   useEffect(() => {
@@ -85,6 +93,7 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       setLocalEndpoints(updatedEndpoints);
       setEndpoints(updatedEndpoints);
       setSelectedEndpoint(null);
+      setCurrentView(VIEW_TYPES.COMPONENTS);
     } catch (error) {
       console.error('Error updating endpoint:', error);
     }
@@ -98,6 +107,7 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       setLocalEndpoints(filteredEndpoints);
       setEndpoints(filteredEndpoints);
       setSelectedEndpoint(null);
+      setCurrentView(VIEW_TYPES.COMPONENTS);
     } catch (error) {
       console.error('Error deleting endpoint:', error);
     }
@@ -124,12 +134,18 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
   
   const handleSelectEndpoint = (endpoint) => {
     setSelectedEndpoint(endpoint);
-    setShowComponentsList(false);
+    setCurrentView(VIEW_TYPES.ENDPOINT_DETAIL);
   };
   
   const handleComponentsChange = (updatedComponents) => {
     setLocalComponents(updatedComponents);
     setComponents(updatedComponents);
+  };
+
+  // Handler for external link buttons
+  const handleExternalLinkClick = (viewType) => {
+    setCurrentView(viewType);
+    setSelectedEndpoint(null);
   };
 
   if (!currentFeature) {
@@ -156,28 +172,34 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <UIMockup />
-        <APIEndpoints 
-          endpoints={endpoints} 
-          onAddEndpoint={handleAddEndpoint} 
-          onSelectEndpoint={handleSelectEndpoint}
-        />
-        <DatabaseChanges 
-          changes={databaseChanges} 
-          onAddChange={handleAddDatabaseChange} 
-        />
+      <UIMockup onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.MOCKUP)} />
+      <APIEndpoints 
+        endpoints={endpoints} 
+        onAddEndpoint={handleAddEndpoint} 
+        onSelectEndpoint={handleSelectEndpoint}
+        onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
+      />
+      <DatabaseChanges 
+        changes={databaseChanges} 
+        onAddChange={handleAddDatabaseChange} 
+        onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
+      />
       </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {!showComponentsList && selectedEndpoint ? (
+        {currentView === VIEW_TYPES.ENDPOINT_DETAIL && selectedEndpoint ? (
           <EndpointDetail 
             endpoint={selectedEndpoint} 
             onUpdate={handleUpdateEndpoint} 
             onDelete={handleDeleteEndpoint}
             onCancel={() => {
               setSelectedEndpoint(null);
-              setShowComponentsList(true);
+              setCurrentView(VIEW_TYPES.COMPONENTS);
             }}
+          />
+        ) : currentView === VIEW_TYPES.MOCKUP ? (
+          <MockupScreengrabs
+            onBack={() => setCurrentView(VIEW_TYPES.COMPONENTS)}
           />
         ) : (
           <div>

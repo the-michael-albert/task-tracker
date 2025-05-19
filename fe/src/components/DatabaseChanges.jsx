@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ExternalLink, Plus, User } from 'lucide-react';
 import AssignTaskDialog from './AssignTaskDialog';
 
-const DatabaseChanges = ({ changes, onAddChange }) => {
+const DatabaseChanges = ({ changes, onAddChange, onExternalLinkClick }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [newChange, setNewChange] = useState({
@@ -27,7 +27,10 @@ const DatabaseChanges = ({ changes, onAddChange }) => {
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold">Database Changes</h2>
-        <button className="btn btn-sm btn-ghost">
+        <button 
+          className="btn btn-sm btn-ghost"
+          onClick={onExternalLinkClick}
+        >
           <ExternalLink size={16} />
         </button>
       </div>
