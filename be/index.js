@@ -7,6 +7,7 @@ const path = require('path');
 const componentRoutes = require('./routes/components');
 const endpointRoutes = require('./routes/endpoints');
 const databaseChangeRoutes = require('./routes/databaseChanges');
+const featureRoutes = require('./routes/features');
 
 // Initialize Express app
 const app = express();
@@ -21,6 +22,7 @@ app.use(morgan('dev'));
 app.use('/api/components', componentRoutes);
 app.use('/api/endpoints', endpointRoutes);
 app.use('/api/database-changes', databaseChangeRoutes);
+app.use('/api/features', featureRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

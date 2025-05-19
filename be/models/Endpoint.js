@@ -13,6 +13,7 @@ db.count({}, (err, count) => {
       {
         method: 'POST',
         path: '/api/auth/endpoint',
+        featureId: null, // Will be updated with initial feature ID
         queryParams: [],
         requestBody: '{\n  "json": {}\n}',
         responseBody: '{\n  "json": {}\n}',
@@ -22,6 +23,7 @@ db.count({}, (err, count) => {
       {
         method: 'GET',
         path: '/api/auth/endpoint',
+        featureId: null, // Will be updated with initial feature ID
         queryParams: [
           { key: 'sort', value: 'true' },
           { key: 'limit', value: '10' },
@@ -34,9 +36,23 @@ db.count({}, (err, count) => {
       }
     ];
 
-    db.insert(initialEndpoints, (err) => {
-      if (err) console.error('Error initializing endpoints:', err);
-      else console.log('Endpoints initialized successfully');
+    // Get the ID of the initial feature and associate endpoints with it
+    const featuresDb = new Datastore({
+      filename: path.join(__dirname, '../data/features.db'),
+      autoload: true
+    });
+    
+    featuresDb.findOne({}, (err, feature) => {
+      if (feature) {
+        initialEndpoints.forEach(endpoint => {
+          endpoint.featureId = feature._id;
+        });
+      }
+      
+      db.insert(initialEndpoints, (err) => {
+        if (err) console.error('Error initializing endpoints:', err);
+        else console.log('Endpoints initialized successfully');
+      });
     });
   }
 });
@@ -45,6 +61,11 @@ const Endpoint = {
   // Find all endpoints
   findAll: (callback) => {
     db.find({}).sort({ createdAt: -1 }).exec(callback);
+  },
+
+  // Find endpoints by feature ID
+  findByFeatureId: (featureId, callback) => {
+    db.find({ featureId }).sort({ createdAt: -1 }).exec(callback);
   },
 
   // Find endpoint by ID

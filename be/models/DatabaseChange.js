@@ -13,6 +13,7 @@ db.count({}, (err, count) => {
       {
         type: 'Create Table',
         name: 'User Preferences',
+        featureId: null, // Will be updated with initial feature ID
         icon: 'user',
         completed: false,
         createdAt: new Date(),
@@ -20,9 +21,21 @@ db.count({}, (err, count) => {
       }
     ];
 
-    db.insert(initialDatabaseChanges, (err) => {
-      if (err) console.error('Error initializing database changes:', err);
-      else console.log('Database changes initialized successfully');
+    // Get the ID of the initial feature and associate database changes with it
+    const featuresDb = new Datastore({
+      filename: path.join(__dirname, '../data/features.db'),
+      autoload: true
+    });
+    
+    featuresDb.findOne({}, (err, feature) => {
+      if (feature) {
+        initialDatabaseChanges[0].featureId = feature._id;
+      }
+      
+      db.insert(initialDatabaseChanges, (err) => {
+        if (err) console.error('Error initializing database changes:', err);
+        else console.log('Database changes initialized successfully');
+      });
     });
   }
 });
@@ -31,6 +44,11 @@ const DatabaseChange = {
   // Find all database changes
   findAll: (callback) => {
     db.find({}).sort({ createdAt: -1 }).exec(callback);
+  },
+
+  // Find database changes by feature ID
+  findByFeatureId: (featureId, callback) => {
+    db.find({ featureId }).sort({ createdAt: -1 }).exec(callback);
   },
 
   // Find database change by ID

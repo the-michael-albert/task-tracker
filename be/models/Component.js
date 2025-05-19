@@ -13,6 +13,7 @@ db.count({}, (err, count) => {
       {
         name: 'DashboardContext',
         type: 'context',
+        featureId: null, // This will be updated to match the initial feature ID
         children: [
           {
             name: 'DashboardProvider',
@@ -28,9 +29,21 @@ db.count({}, (err, count) => {
       }
     ];
 
-    db.insert(initialComponents, (err) => {
-      if (err) console.error('Error initializing components:', err);
-      else console.log('Components initialized successfully');
+    // Get the ID of the initial feature and associate components with it
+    const featuresDb = new Datastore({
+      filename: path.join(__dirname, '../data/features.db'),
+      autoload: true
+    });
+    
+    featuresDb.findOne({}, (err, feature) => {
+      if (feature) {
+        initialComponents[0].featureId = feature._id;
+      }
+      
+      db.insert(initialComponents, (err) => {
+        if (err) console.error('Error initializing components:', err);
+        else console.log('Components initialized successfully');
+      });
     });
   }
 });
@@ -39,6 +52,11 @@ const Component = {
   // Find all components
   findAll: (callback) => {
     db.find({}).sort({ createdAt: -1 }).exec(callback);
+  },
+
+  // Find components by feature ID
+  findByFeatureId: (featureId, callback) => {
+    db.find({ featureId }).sort({ createdAt: -1 }).exec(callback);
   },
 
   // Find component by ID
