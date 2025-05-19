@@ -46,6 +46,7 @@ function App() {
             databaseChanges={databaseChanges}
             setEndpoints={setEndpoints}
             setDatabaseChanges={setDatabaseChanges}
+            setComponents={setComponents}
           />
         )}
       </main>

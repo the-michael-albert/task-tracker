@@ -2,12 +2,19 @@ import React, { useState } from 'react';
 import UIMockup from './UIMockup';
 import APIEndpoints from './APIEndpoints';
 import DatabaseChanges from './DatabaseChanges';
-import ComponentsList from './ComponentsList';
+import EnhancedComponentsList from './EnhancedComponentsList';
 import EndpointDetail from './EndpointDetail';
-import { createEndpoint, updateEndpoint, deleteEndpoint, createDatabaseChange } from '../api';
+import { 
+  createEndpoint, 
+  updateEndpoint, 
+  deleteEndpoint, 
+  createDatabaseChange 
+} from '../api';
+import { ArrowUp } from 'lucide-react';
 
-const Dashboard = ({ components, endpoints, databaseChanges, setEndpoints, setDatabaseChanges }) => {
+const Dashboard = ({ components, endpoints, databaseChanges, setEndpoints, setDatabaseChanges, setComponents }) => {
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
+  const [showComponentsList, setShowComponentsList] = useState(true);
   
   const handleAddEndpoint = async (newEndpoint) => {
     try {
@@ -49,6 +56,11 @@ const Dashboard = ({ components, endpoints, databaseChanges, setEndpoints, setDa
   
   const handleSelectEndpoint = (endpoint) => {
     setSelectedEndpoint(endpoint);
+    setShowComponentsList(false);
+  };
+  
+  const handleComponentsChange = (updatedComponents) => {
+    setComponents(updatedComponents);
   };
 
   return (
@@ -57,7 +69,7 @@ const Dashboard = ({ components, endpoints, databaseChanges, setEndpoints, setDa
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Dashboard Creation</h1>
           <button className="btn btn-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 2-2 2.5-2-2.5"/><path d="M11 22.4V4"/></svg>
+            <ArrowUp size={20} />
           </button>
         </div>
       </div>
@@ -76,15 +88,29 @@ const Dashboard = ({ components, endpoints, databaseChanges, setEndpoints, setDa
       </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {selectedEndpoint ? (
+        {!showComponentsList && selectedEndpoint ? (
           <EndpointDetail 
             endpoint={selectedEndpoint} 
             onUpdate={handleUpdateEndpoint} 
             onDelete={handleDeleteEndpoint}
-            onCancel={() => setSelectedEndpoint(null)}
+            onCancel={() => {
+              setSelectedEndpoint(null);
+              setShowComponentsList(true);
+            }}
           />
         ) : (
-          <ComponentsList components={components} endpoints={endpoints} />
+          <div>
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Components</h2>
+            </div>
+            <div className="p-4">
+              <EnhancedComponentsList 
+                components={components} 
+                endpoints={endpoints}
+                onComponentsChange={handleComponentsChange}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

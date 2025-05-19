@@ -74,4 +74,34 @@ router.delete('/:id', (req, res) => {
   });
 });
 
+// Add a child component
+router.post('/:id/children', (req, res) => {
+  const childData = req.body;
+  const parentId = req.params.id;
+
+  if (!childData.name) {
+    return res.status(400).json({ error: 'Child component name is required' });
+  }
+
+  Component.addChild(parentId, childData, (err, component) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error adding child component' });
+    }
+    res.status(201).json(component);
+  });
+});
+
+// Delete a child component
+router.delete('/:id/children/:childId', (req, res) => {
+  const parentId = req.params.id;
+  const childId = req.params.childId;
+
+  Component.removeChild(parentId, childId, (err, component) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error removing child component' });
+    }
+    res.json({ message: 'Child component deleted successfully', component });
+  });
+});
+
 module.exports = router;

@@ -69,6 +69,55 @@ const Component = {
     );
   },
 
+  // Add a child to a component
+  addChild: (parentId, childData, callback) => {
+    db.findOne({ _id: parentId }, (err, parent) => {
+      if (err) return callback(err);
+      if (!parent) return callback(new Error('Parent not found'));
+
+      const children = parent.children || [];
+      const child = {
+        ...childData,
+        _id: new Date().getTime().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      children.push(child);
+      
+      db.update(
+        { _id: parentId },
+        { $set: { children, updatedAt: new Date() } },
+        {},
+        (err) => {
+          if (err) return callback(err);
+          db.findOne({ _id: parentId }, callback);
+        }
+      );
+    });
+  },
+
+  // Remove a child from a component
+  removeChild: (parentId, childId, callback) => {
+    db.findOne({ _id: parentId }, (err, parent) => {
+      if (err) return callback(err);
+      if (!parent) return callback(new Error('Parent not found'));
+
+      const children = parent.children || [];
+      const updatedChildren = children.filter(child => child._id !== childId);
+      
+      db.update(
+        { _id: parentId },
+        { $set: { children: updatedChildren, updatedAt: new Date() } },
+        {},
+        (err) => {
+          if (err) return callback(err);
+          db.findOne({ _id: parentId }, callback);
+        }
+      );
+    });
+  },
+
   // Delete a component
   delete: (id, callback) => {
     db.remove({ _id: id }, {}, callback);

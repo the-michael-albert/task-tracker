@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { ExternalLink, Plus, User } from 'lucide-react';
+import AssignTaskDialog from './AssignTaskDialog';
 
 const DatabaseChanges = ({ changes, onAddChange }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [newChange, setNewChange] = useState({
     type: 'Create Table',
     name: 'User Preferences',
@@ -14,6 +16,11 @@ const DatabaseChanges = ({ changes, onAddChange }) => {
     onAddChange(newChange);
     setNewChange({ type: 'Create Table', name: 'User Preferences', icon: 'user' });
     setIsAdding(false);
+  };
+
+  const handleAssign = (assignee) => {
+    console.log(`Task assigned to: ${assignee}`);
+    // In a real implementation, we would update the change with the assignee
   };
 
   return (
@@ -28,10 +35,15 @@ const DatabaseChanges = ({ changes, onAddChange }) => {
         <div className="space-y-2">
           {changes.map((change) => (
             <div key={change._id} className="flex items-center p-2 border border-gray-200 rounded hover:bg-gray-50">
-              <input type="checkbox" className="checkbox checkbox-sm mr-3" />
+              <input type="checkbox" className="checkbox checkbox-sm mr-3" checked={change.completed} readOnly />
               <span className="text-sm">{change.type} {change.name} Table</span>
               <div className="ml-auto">
-                <User size={16} />
+                <button 
+                  className="btn btn-sm btn-ghost text-gray-500"
+                  onClick={() => setIsAssigning(true)}
+                >
+                  <User size={16} />
+                </button>
               </div>
             </div>
           ))}
@@ -77,6 +89,14 @@ const DatabaseChanges = ({ changes, onAddChange }) => {
           )}
         </div>
       </div>
+      
+      {isAssigning && (
+        <AssignTaskDialog 
+          isOpen={isAssigning} 
+          onClose={() => setIsAssigning(false)} 
+          onAssign={handleAssign}
+        />
+      )}
     </div>
   );
 };
