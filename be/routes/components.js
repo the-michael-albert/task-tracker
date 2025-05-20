@@ -1,3 +1,5 @@
+// be/routes/components.js (updated with toggle completion)
+
 const express = require('express');
 const Component = require('../models/Component');
 
@@ -53,6 +55,32 @@ router.put('/:id', (req, res) => {
   Component.update(req.params.id, componentData, (err, component) => {
     if (err) {
       return res.status(500).json({ error: 'Error updating component' });
+    }
+    if (!component) {
+      return res.status(404).json({ error: 'Component not found' });
+    }
+    res.json(component);
+  });
+});
+
+// Toggle component completion status
+router.patch('/:id/toggle-completion', (req, res) => {
+  Component.toggleCompletion(req.params.id, (err, component) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error toggling completion status' });
+    }
+    if (!component) {
+      return res.status(404).json({ error: 'Component not found' });
+    }
+    res.json(component);
+  });
+});
+
+// Toggle child component completion status
+router.patch('/:id/children/:childId/toggle-completion', (req, res) => {
+  Component.toggleChildCompletion(req.params.id, req.params.childId, (err, component) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error toggling child completion status' });
     }
     if (!component) {
       return res.status(404).json({ error: 'Component not found' });

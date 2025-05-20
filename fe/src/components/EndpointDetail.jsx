@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, ArrowDown } from 'lucide-react';
+import { Trash2, ArrowDown, Check } from 'lucide-react';
 
 const EndpointDetail = ({ endpoint, onUpdate, onDelete, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -7,7 +7,9 @@ const EndpointDetail = ({ endpoint, onUpdate, onDelete, onCancel }) => {
     path: endpoint.path || '',
     queryParams: endpoint.queryParams || [],
     requestBody: endpoint.requestBody || '{}',
-    responseBody: endpoint.responseBody || '{}'
+    responseBody: endpoint.responseBody || '{}',
+    description: endpoint.description || '',
+    completed: endpoint.completed || false
   });
 
   const [newParamKey, setNewParamKey] = useState('');
@@ -19,7 +21,9 @@ const EndpointDetail = ({ endpoint, onUpdate, onDelete, onCancel }) => {
       path: endpoint.path || '',
       queryParams: endpoint.queryParams || [],
       requestBody: endpoint.requestBody || '{}',
-      responseBody: endpoint.responseBody || '{}'
+      responseBody: endpoint.responseBody || '{}',
+      description: endpoint.description || '',
+      completed: endpoint.completed || false
     });
   }, [endpoint]);
 
@@ -29,6 +33,14 @@ const EndpointDetail = ({ endpoint, onUpdate, onDelete, onCancel }) => {
 
   const handlePathChange = (e) => {
     setFormData({ ...formData, path: e.target.value });
+  };
+
+  const handleToggleCompleted = () => {
+    setFormData({ ...formData, completed: !formData.completed });
+  };
+
+  const handleDescriptionChange = (e) => {
+    setFormData({ ...formData, description: e.target.value });
   };
 
   const handleAddParam = () => {
@@ -109,6 +121,31 @@ const EndpointDetail = ({ endpoint, onUpdate, onDelete, onCancel }) => {
                   onChange={handlePathChange}
                   placeholder="/api/path"
                 />
+              </div>
+              
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-1">Description:</label>
+                <textarea 
+                  className="textarea textarea-bordered w-full"
+                  value={formData.description}
+                  onChange={handleDescriptionChange}
+                  placeholder="Add a description for this endpoint"
+                  rows={3}
+                ></textarea>
+              </div>
+              
+              <div className="flex items-center mb-3">
+                <label className="flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="checkbox checkbox-sm mr-2"
+                    checked={formData.completed}
+                    onChange={handleToggleCompleted}
+                  />
+                  <span className="text-sm font-medium">
+                    Mark as Completed
+                  </span>
+                </label>
               </div>
             </div>
 

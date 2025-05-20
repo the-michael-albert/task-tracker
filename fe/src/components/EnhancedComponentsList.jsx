@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronDown, ChevronRight, Trash2, Plus } from 'lucide-react';
+import { Folder, File, ChevronDown, ChevronRight, Trash2, Plus, Check, Info, Edit } from 'lucide-react';
 import ImageGallery from './ImageGallery';
 import { 
   createComponent, 
@@ -8,13 +8,17 @@ import {
   deleteChildComponent,
   fetchFeatureImages,
   uploadImage,
-  deleteImage
+  deleteImage,
+  toggleComponentCompletion,
+  toggleChildComponentCompletion,
+  updateComponent
 } from '../api';
 import { useFeatures } from '../context/FeatureContext';
 
 
-const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChild }) => {
+const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChild, onToggleCompletion, onToggleChildCompletion, onEdit }) => {
   const [expandedComponents, setExpandedComponents] = useState({});
+  const [showDescription, setShowDescription] = useState({});
 
   const toggleExpand = (id, e) => {
     e.stopPropagation();
@@ -24,13 +28,22 @@ const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChi
     }));
   };
 
-  const renderComponentTree = (component, level = 0) => {
+  const handleInfoClick = (id, e) => {
+    e.stopPropagation();
+    setShowDescription(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const renderComponentTree = (component, level = 0, parentId = null) => {
     const isExpanded = expandedComponents[component._id] !== false;
     const hasChildren = component.children && component.children.length > 0;
+    const showComponentDesc = showDescription[component._id];
     
     return (
       <li key={component._id} className="mb-1">
-        <div className="flex items-center p-1 hover:bg-gray-50 rounded">
+        <div className={`flex items-center p-1 hover:bg-gray-50 rounded ${component.completed ? 'bg-green-50' : ''}`}>
           {selectingComponents && (
             <input 
               type="checkbox" 
@@ -38,6 +51,26 @@ const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChi
               onChange={() => onSelect(component._id)}
               onClick={(e) => e.stopPropagation()}
             />
+          )}
+          
+          {!selectingComponents && (
+            <button 
+              className={`mr-2 ${component.completed ? 'text-green-500' : 'text-gray-300 hover:text-gray-500'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (parentId) {
+                  onToggleChildCompletion(parentId, component._id);
+                } else {
+                  onToggleCompletion(component._id);
+                }
+              }}
+            >
+              {component.completed ? (
+                <Check size={16} className="text-green-500" />
+              ) : (
+                <div className="w-4 h-4 border border-gray-300 rounded-sm"></div>
+              )}
+            </button>
           )}
           
           {hasChildren && (
@@ -57,24 +90,55 @@ const ComponentTreeView = ({ components, selectingComponents, onSelect, onAddChi
             <File size={16} className="mr-1 text-gray-500" />
           )}
           
-          <span className="font-medium">{component.name}</span>
+          <span className={`font-medium ${component.completed ? 'line-through text-gray-500' : ''}`}>
+            {component.name}
+          </span>
           
-          {(component.type === 'context' || component.type === 'provider') && !selectingComponents && (
-            <button 
-              className="ml-2 text-gray-400 hover:text-blue-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddChild(component._id);
-              }}
-            >
-              <Plus size={14} />
-            </button>
-          )}
+          <div className="ml-auto flex space-x-1">
+            {component.description && !selectingComponents && (
+              <button 
+                className="text-gray-400 hover:text-gray-600"
+                onClick={(e) => handleInfoClick(component._id, e)}
+              >
+                <Info size={14} />
+              </button>
+            )}
+            
+            {!selectingComponents && (
+              <button 
+                className="text-gray-400 hover:text-gray-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(component, parentId);
+                }}
+              >
+                <Edit size={14} />
+              </button>
+            )}
+            
+            {(component.type === 'context' || component.type === 'provider') && !selectingComponents && (
+              <button 
+                className="text-gray-400 hover:text-blue-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddChild(component._id);
+                }}
+              >
+                <Plus size={14} />
+              </button>
+            )}
+          </div>
         </div>
+        
+        {showComponentDesc && component.description && (
+          <div className="ml-8 mt-1 p-2 bg-gray-50 rounded text-sm text-gray-600 border border-gray-200">
+            {component.description}
+          </div>
+        )}
         
         {hasChildren && isExpanded && (
           <ul className="list-none pl-6 mt-1">
-            {component.children.map(child => renderComponentTree(child, level + 1))}
+            {component.children.map(child => renderComponentTree(child, level + 1, component._id))}
           </ul>
         )}
       </li>
@@ -92,9 +156,14 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
   const [selectingComponents, setSelectingComponents] = useState(false);
   const [selectedComponents, setSelectedComponents] = useState([]);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
+  const [isEditingComponent, setIsEditingComponent] = useState(false);
+  const [editingComponent, setEditingComponent] = useState(null);
+  const [editingParentId, setEditingParentId] = useState(null);
   const [newComponent, setNewComponent] = useState({
     name: '',
-    type: 'component'
+    type: 'component',
+    description: '',
+    completed: false
   });
   const [selectedParentId, setSelectedParentId] = useState(null);
   const [error, setError] = useState('');
@@ -166,20 +235,119 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
         }
       } else {
         // Adding root component
-        const newComp = await createComponent(newComponent);
+        const componentData = {
+          ...newComponent,
+          featureId: currentFeature ? currentFeature._id : null
+        };
+        const newComp = await createComponent(componentData);
         if (onComponentsChange) {
           onComponentsChange([...components, newComp]);
         }
       }
       
       // Reset form
-      setNewComponent({ name: '', type: 'component' });
+      setNewComponent({ name: '', type: 'component', description: '', completed: false });
       setIsAddingComponent(false);
       setSelectedParentId(null);
       setError('');
     } catch (err) {
       console.error('Error adding component:', err);
       setError('Failed to add component');
+    }
+  };
+
+  const handleUpdateComponent = async () => {
+    if (!newComponent.name) {
+      setError('Component name is required');
+      return;
+    }
+
+    try {
+      if (editingParentId) {
+        // We're editing a child component inside a parent
+        // First get the parent component
+        const parent = components.find(comp => comp._id === editingParentId);
+        if (!parent) {
+          setError('Parent component not found');
+          return;
+        }
+
+        // Find the child in the parent's children array
+        const childIndex = parent.children.findIndex(child => child._id === editingComponent._id);
+        if (childIndex === -1) {
+          setError('Child component not found');
+          return;
+        }
+
+        // Create a new children array with the updated child
+        const updatedChildren = [...parent.children];
+        updatedChildren[childIndex] = {
+          ...updatedChildren[childIndex],
+          name: newComponent.name,
+          type: newComponent.type,
+          description: newComponent.description,
+          completed: newComponent.completed
+        };
+
+        // Update the parent component with the new children array
+        const updatedParent = await updateComponent(editingParentId, {
+          ...parent,
+          children: updatedChildren
+        });
+
+        // Update the components list
+        if (onComponentsChange) {
+          onComponentsChange(components.map(comp => 
+            comp._id === editingParentId ? updatedParent : comp
+          ));
+        }
+      } else {
+        // We're editing a root component
+        const updatedComponent = await updateComponent(editingComponent._id, newComponent);
+        
+        // Update the components list
+        if (onComponentsChange) {
+          onComponentsChange(components.map(comp => 
+            comp._id === editingComponent._id ? updatedComponent : comp
+          ));
+        }
+      }
+      
+      // Reset form
+      setNewComponent({ name: '', type: 'component', description: '', completed: false });
+      setIsEditingComponent(false);
+      setEditingComponent(null);
+      setEditingParentId(null);
+      setError('');
+    } catch (err) {
+      console.error('Error updating component:', err);
+      setError('Failed to update component');
+    }
+  };
+
+  const handleToggleCompletion = async (id) => {
+    try {
+      const updatedComponent = await toggleComponentCompletion(id);
+      if (onComponentsChange) {
+        onComponentsChange(components.map(comp => 
+          comp._id === id ? updatedComponent : comp
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling component completion:', error);
+    }
+  };
+
+  const handleToggleChildCompletion = async (parentId, childId) => {
+    try {
+      const updatedParent = await toggleChildComponentCompletion(parentId, childId);
+      if (onComponentsChange) {
+        onComponentsChange(components.map(comp => 
+          comp._id === parentId ? updatedParent : comp
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling child component completion:', error);
     }
   };
 
@@ -238,6 +406,21 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
   const handleAddButtonClick = (parentId = null) => {
     setSelectedParentId(parentId);
     setIsAddingComponent(true);
+    setIsEditingComponent(false);
+    setNewComponent({ name: '', type: 'component', description: '', completed: false });
+  };
+
+  const handleEditComponent = (component, parentId = null) => {
+    setEditingComponent(component);
+    setEditingParentId(parentId);
+    setIsEditingComponent(true);
+    setIsAddingComponent(false);
+    setNewComponent({
+      name: component.name,
+      type: component.type,
+      description: component.description || '',
+      completed: component.completed || false
+    });
   };
 
   return (
@@ -259,12 +442,17 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
           {components.length === 0 ? (
             <div className="p-3 text-sm text-gray-500">No components available</div>
           ) : (
-            <ComponentTreeView 
-              components={components} 
-              selectingComponents={selectingComponents}
-              onSelect={handleSelect}
-              onAddChild={handleAddButtonClick}
-            />
+            <div className="p-2">
+              <ComponentTreeView 
+                components={components} 
+                selectingComponents={selectingComponents}
+                onSelect={handleSelect}
+                onAddChild={handleAddButtonClick}
+                onToggleCompletion={handleToggleCompletion}
+                onToggleChildCompletion={handleToggleChildCompletion}
+                onEdit={handleEditComponent}
+              />
+            </div>
           )}
         </div>
         
@@ -272,7 +460,7 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
           <div className="mt-2 text-red-500 text-sm">{error}</div>
         )}
         
-        {isAddingComponent && (
+        {(isAddingComponent || isEditingComponent) && (
           <div className="mt-2 border border-gray-200 rounded p-3">
             <div className="mb-2">
               <label className="block text-sm font-medium mb-1">
@@ -280,7 +468,7 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
               </label>
               <input 
                 type="text" 
-                className="input input-sm input-bordered w-full"
+                className="input input-sm input-bordered w-full mb-2"
                 value={newComponent.name}
                 onChange={(e) => setNewComponent({...newComponent, name: e.target.value})}
                 placeholder="Enter component name"
@@ -291,7 +479,7 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
                 Type:
               </label>
               <select 
-                className="select select-sm select-bordered w-full"
+                className="select select-sm select-bordered w-full mb-2"
                 value={newComponent.type}
                 onChange={(e) => setNewComponent({...newComponent, type: e.target.value})}
               >
@@ -300,11 +488,37 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
                 <option value="provider">Provider</option>
               </select>
             </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium mb-1">
+                Description:
+              </label>
+              <textarea 
+                className="textarea textarea-bordered textarea-sm w-full mb-2"
+                value={newComponent.description}
+                onChange={(e) => setNewComponent({...newComponent, description: e.target.value})}
+                placeholder="Add a description for this component"
+                rows={3}
+              ></textarea>
+            </div>
+            <div className="mb-3">
+              <label className="flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="checkbox checkbox-sm mr-2"
+                  checked={newComponent.completed}
+                  onChange={(e) => setNewComponent({...newComponent, completed: e.target.checked})}
+                />
+                <span className="text-sm">Mark as Completed</span>
+              </label>
+            </div>
             <div className="flex justify-end space-x-2 mt-3">
               <button 
                 className="btn btn-sm btn-ghost"
                 onClick={() => {
                   setIsAddingComponent(false);
+                  setIsEditingComponent(false);
+                  setEditingComponent(null);
+                  setEditingParentId(null);
                   setError('');
                 }}
               >
@@ -312,9 +526,9 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
               </button>
               <button 
                 className="btn btn-sm btn-primary"
-                onClick={handleAddComponent}
+                onClick={isEditingComponent ? handleUpdateComponent : handleAddComponent}
               >
-                Add Component
+                {isEditingComponent ? 'Update Component' : 'Add Component'}
               </button>
             </div>
           </div>
@@ -338,10 +552,11 @@ const EnhancedComponentsList = ({ components, endpoints, onComponentsChange }) =
       </div>
       
       <div className="col-span-1">
-      <ImageGallery 
+        <ImageGallery 
           images={images}
           onAddImage={handleAddImage}
-          onDeleteImage={handleDeleteImage} />
+          onDeleteImage={handleDeleteImage} 
+        />
       </div>
     </div>
   );

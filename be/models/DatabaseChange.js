@@ -1,3 +1,5 @@
+// be/models/DatabaseChange.js (modified)
+
 const Datastore = require('nedb');
 const path = require('path');
 
@@ -15,6 +17,7 @@ db.count({}, (err, count) => {
         name: 'User Preferences',
         featureId: null, // Will be updated with initial feature ID
         icon: 'user',
+        description: 'Creates a table to store user preferences including theme selection and dashboard layout', // Added description
         completed: false,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -60,6 +63,7 @@ const DatabaseChange = {
   create: (changeData, callback) => {
     const databaseChange = {
       ...changeData,
+      description: changeData.description || '', // Default to empty string if not provided
       completed: false,
       createdAt: new Date(),
       updatedAt: new Date()

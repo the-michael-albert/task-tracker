@@ -1,3 +1,5 @@
+// be/models/Component.js (modified)
+
 const Datastore = require('nedb');
 const path = require('path');
 
@@ -14,13 +16,27 @@ db.count({}, (err, count) => {
         name: 'DashboardContext',
         type: 'context',
         featureId: null, // This will be updated to match the initial feature ID
+        completed: false, // Added completed field
+        description: 'Provides state and context for the dashboard features', // Added description field
         children: [
           {
             name: 'DashboardProvider',
             type: 'provider',
+            completed: false, // Added completed field
+            description: 'Provider implementation for Dashboard context', // Added description field
             children: [
-              { name: 'ActionTable', type: 'component' },
-              { name: 'Snapshot', type: 'component' }
+              { 
+                name: 'ActionTable', 
+                type: 'component', 
+                completed: false, 
+                description: 'Table component for displaying dashboard actions' 
+              },
+              { 
+                name: 'Snapshot', 
+                type: 'component', 
+                completed: false, 
+                description: 'Component for displaying dashboard snapshots' 
+              }
             ]
           }
         ],
@@ -68,6 +84,8 @@ const Component = {
   create: (componentData, callback) => {
     const component = {
       ...componentData,
+      completed: componentData.completed || false, // Default to false if not provided
+      description: componentData.description || '', // Default to empty string if not provided
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -87,6 +105,26 @@ const Component = {
     );
   },
 
+  // Toggle completion status
+  toggleCompletion: (id, callback) => {
+    db.findOne({ _id: id }, (err, component) => {
+      if (err) return callback(err);
+      if (!component) return callback(new Error('Component not found'));
+      
+      const completed = !component.completed;
+      
+      db.update(
+        { _id: id },
+        { $set: { completed, updatedAt: new Date() } },
+        {},
+        (err) => {
+          if (err) return callback(err);
+          db.findOne({ _id: id }, callback);
+        }
+      );
+    });
+  },
+
   // Add a child to a component
   addChild: (parentId, childData, callback) => {
     db.findOne({ _id: parentId }, (err, parent) => {
@@ -97,11 +135,39 @@ const Component = {
       const child = {
         ...childData,
         _id: new Date().getTime().toString(),
+        completed: childData.completed || false, // Default to false if not provided
+        description: childData.description || '', // Default to empty string if not provided
         createdAt: new Date(),
         updatedAt: new Date()
       };
       
       children.push(child);
+      
+      db.update(
+        { _id: parentId },
+        { $set: { children, updatedAt: new Date() } },
+        {},
+        (err) => {
+          if (err) return callback(err);
+          db.findOne({ _id: parentId }, callback);
+        }
+      );
+    });
+  },
+
+  // Toggle child completion status
+  toggleChildCompletion: (parentId, childId, callback) => {
+    db.findOne({ _id: parentId }, (err, parent) => {
+      if (err) return callback(err);
+      if (!parent) return callback(new Error('Parent not found'));
+
+      const children = parent.children || [];
+      const childIndex = children.findIndex(child => child._id === childId);
+      
+      if (childIndex === -1) return callback(new Error('Child not found'));
+      
+      children[childIndex].completed = !children[childIndex].completed;
+      children[childIndex].updatedAt = new Date();
       
       db.update(
         { _id: parentId },

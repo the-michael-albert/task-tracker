@@ -1,18 +1,78 @@
-import React, { useState } from 'react';
-import { ExternalLink, Plus, ArrowUpDown, MoreVertical } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ExternalLink, Plus, ArrowUpDown, MoreVertical, Check, Edit, Trash2 } from 'lucide-react';
+import { toggleEndpointCompletion } from '../api';
+import AssignTaskDialog from './AssignTaskDialog';
 
-const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLinkClick }) => {
+const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLinkClick, onDeleteEndpoint }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newEndpoint, setNewEndpoint] = useState({
     method: 'GET',
-    path: '/api/auth/endpoint'
+    path: '/api/auth/endpoint',
+    description: '',
   });
+  const [showDropdown, setShowDropdown] = useState(null);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [selectedEndpointForAssign, setSelectedEndpointForAssign] = useState(null);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(null);
+      }
+    }
+
+    // Add event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      // Remove event listener on cleanup
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onAddEndpoint(newEndpoint);
-    setNewEndpoint({ method: 'GET', path: '/api/auth/endpoint' });
+    setNewEndpoint({ 
+      method: 'GET', 
+      path: '/api/auth/endpoint', 
+      description: '' 
+    });
     setIsAdding(false);
+  };
+
+  const handleToggleCompletion = (e, endpoint) => {
+    e.stopPropagation(); // Prevent the click from triggering endpoint selection
+    toggleEndpointCompletion(endpoint._id)
+      .then(() => {
+        // The parent component should refresh the data
+      })
+      .catch((error) => {
+        console.error('Error toggling endpoint completion:', error);
+      });
+  };
+
+  const handleDeleteClick = (e, endpoint) => {
+    e.stopPropagation();
+    setShowDropdown(null);
+    if (confirm('Are you sure you want to delete this endpoint?')) {
+      if (onDeleteEndpoint) {
+        onDeleteEndpoint(endpoint._id);
+      }
+    }
+  };
+
+  const handleAssign = (assignee, endpointId, itemType) => {
+    console.log(`Endpoint ${endpointId} assigned to: ${assignee}`);
+    // In a real implementation, we would update the endpoint with the assignee
+  };
+
+  const handleAssignClick = (e, endpoint) => {
+    e.stopPropagation();
+    setShowDropdown(null);
+    setSelectedEndpointForAssign(endpoint);
+    setIsAssigning(true);
   };
 
   return (
@@ -31,29 +91,88 @@ const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLi
           {endpoints.map((endpoint) => (
             <div 
               key={endpoint._id} 
-              className="flex items-center p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50"
+              className={`flex items-center p-2 border rounded cursor-pointer ${
+                endpoint.completed ? 'bg-green-50 border-green-200' : 'border-gray-200 hover:bg-gray-50'
+              }`}
               onClick={() => onSelectEndpoint(endpoint)}
             >
-              <div className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800 mr-2">
+              <button 
+                className={`mr-2 ${endpoint.completed ? 'text-green-500' : 'text-gray-300 hover:text-gray-500'}`}
+                onClick={(e) => handleToggleCompletion(e, endpoint)}
+              >
+                {endpoint.completed ? (
+                  <Check size={18} className="text-green-500" />
+                ) : (
+                  <div className="w-4 h-4 border border-gray-300 rounded-sm"></div>
+                )}
+              </button>
+              <div className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800 mr-2 ${
+                endpoint.completed ? 'opacity-70' : ''
+              }`}>
                 {endpoint.method}
               </div>
-              <span className="text-sm flex-1 truncate">{endpoint.path}</span>
-              <div className="flex items-center space-x-1">
-                <button className="btn btn-sm btn-ghost">
-                  <ArrowUpDown size={14} />
-                </button>
-                <button className="btn btn-sm btn-ghost">
+              <span className={`text-sm flex-1 truncate ${endpoint.completed ? 'line-through text-gray-500' : ''}`}>
+                {endpoint.path}
+              </span>
+              <div className="flex items-center space-x-1 relative" ref={dropdownRef}>
+                <button 
+                  className="btn btn-sm btn-ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDropdown(showDropdown === endpoint._id ? null : endpoint._id);
+                  }}
+                >
                   <MoreVertical size={14} />
                 </button>
+                
+                {showDropdown === endpoint._id && (
+                  <div className="absolute right-0 top-8 w-48 bg-white rounded shadow-lg border border-gray-200 z-10">
+                    <div className="py-1">
+                      <button 
+                        className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDropdown(null);
+                          onSelectEndpoint(endpoint);
+                        }}
+                      >
+                        <Edit size={14} className="mr-2" /> Edit Endpoint
+                      </button>
+                      <button 
+                        className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                        onClick={(e) => handleToggleCompletion(e, endpoint)}
+                      >
+                        <Check size={14} className="mr-2" /> 
+                        {endpoint.completed ? 'Mark as Incomplete' : 'Mark as Complete'}
+                      </button>
+                      <button 
+                        className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                        onClick={(e) => handleAssignClick(e, endpoint)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Assign Task
+                      </button>
+                      <button 
+                        className="flex items-center w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-100"
+                        onClick={(e) => handleDeleteClick(e, endpoint)}
+                      >
+                        <Trash2 size={14} className="mr-2" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
 
           {isAdding ? (
             <form onSubmit={handleSubmit} className="border border-gray-200 rounded p-3">
-              <div className="flex mb-2">
+              <div className="mb-2">
                 <select 
-                  className="select select-sm select-bordered mr-2"
+                  className="select select-sm select-bordered mr-2 mb-2"
                   value={newEndpoint.method}
                   onChange={(e) => setNewEndpoint({...newEndpoint, method: e.target.value})}
                 >
@@ -64,10 +183,17 @@ const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLi
                 </select>
                 <input 
                   type="text" 
-                  className="input input-sm input-bordered flex-1"
+                  className="input input-sm input-bordered w-full mb-2"
                   value={newEndpoint.path}
                   onChange={(e) => setNewEndpoint({...newEndpoint, path: e.target.value})}
                   placeholder="/api/path"
+                />
+                <input 
+                  type="text" 
+                  className="input input-sm input-bordered w-full"
+                  value={newEndpoint.description}
+                  onChange={(e) => setNewEndpoint({...newEndpoint, description: e.target.value})}
+                  placeholder="Description (optional)"
                 />
               </div>
               <div className="flex justify-end space-x-2">
@@ -91,6 +217,20 @@ const APIEndpoints = ({ endpoints, onAddEndpoint, onSelectEndpoint, onExternalLi
           )}
         </div>
       </div>
+
+      {/* Assignment Dialog */}
+      {isAssigning && selectedEndpointForAssign && (
+        <AssignTaskDialog 
+          isOpen={isAssigning} 
+          onClose={() => {
+            setIsAssigning(false);
+            setSelectedEndpointForAssign(null);
+          }} 
+          onAssign={handleAssign}
+          itemId={selectedEndpointForAssign._id}
+          itemType="endpoint"
+        />
+      )}
     </div>
   );
 };

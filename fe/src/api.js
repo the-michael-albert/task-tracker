@@ -1,3 +1,5 @@
+// fe/src/api.js (updated with toggle completion for components and endpoints)
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -68,6 +70,16 @@ export const deleteComponent = async (id) => {
   return response.data;
 };
 
+export const toggleComponentCompletion = async (id) => {
+  const response = await api.patch(`/components/${id}/toggle-completion`);
+  return response.data;
+};
+
+export const toggleChildComponentCompletion = async (parentId, childId) => {
+  const response = await api.patch(`/components/${parentId}/children/${childId}/toggle-completion`);
+  return response.data;
+};
+
 export const addChildComponent = async (parentId, childData) => {
   const response = await api.post(`/components/${parentId}/children`, childData);
   return response.data;
@@ -91,6 +103,11 @@ export const createEndpoint = async (endpoint) => {
 
 export const updateEndpoint = async (id, endpoint) => {
   const response = await api.put(`/endpoints/${id}`, endpoint);
+  return response.data;
+};
+
+export const toggleEndpointCompletion = async (id) => {
+  const response = await api.patch(`/endpoints/${id}/toggle-completion`);
   return response.data;
 };
 
@@ -146,5 +163,94 @@ export const uploadImage = async (formData) => {
 
 export const deleteImage = async (id) => {
   const response = await api.delete(`/images/${id}`);
+  return response.data;
+};
+
+
+
+// User API
+export const fetchUsers = async () => {
+  const response = await api.get('/users');
+  return response.data;
+};
+
+export const searchUsers = async (query) => {
+  const response = await api.get(`/users/search/${query}`);
+  return response.data;
+};
+
+export const getUserById = async (id) => {
+  const response = await api.get(`/users/${id}`);
+  return response.data;
+};
+
+export const createUser = async (user) => {
+  const response = await api.post('/users', user);
+  return response.data;
+};
+
+export const updateUser = async (id, user) => {
+  const response = await api.put(`/users/${id}`, user);
+  return response.data;
+};
+
+export const deleteUser = async (id) => {
+  const response = await api.delete(`/users/${id}`);
+  return response.data;
+};
+
+// Assignment functions for different item types
+export const assignEndpoint = async (endpointId, assigneeId) => {
+  const endpoint = await api.get(`/endpoints/${endpointId}`);
+  const updatedEndpoint = {
+    ...endpoint.data,
+    assigneeId: assigneeId
+  };
+  const response = await api.put(`/endpoints/${endpointId}`, updatedEndpoint);
+  return response.data;
+};
+
+export const assignDatabaseChange = async (changeId, assigneeId) => {
+  const change = await api.get(`/database-changes/${changeId}`);
+  const updatedChange = {
+    ...change.data,
+    assigneeId: assigneeId
+  };
+  const response = await api.put(`/database-changes/${changeId}`, updatedChange);
+  return response.data;
+};
+
+export const assignComponent = async (componentId, assigneeId) => {
+  const component = await api.get(`/components/${componentId}`);
+  const updatedComponent = {
+    ...component.data,
+    assigneeId: assigneeId
+  };
+  const response = await api.put(`/components/${componentId}`, updatedComponent);
+  return response.data;
+};
+
+export const assignChildComponent = async (parentId, childId, assigneeId) => {
+  const parent = await api.get(`/components/${parentId}`);
+  if (!parent.data || !parent.data.children) {
+    throw new Error('Parent component or children not found');
+  }
+  
+  const updatedChildren = parent.data.children.map(child => {
+    if (child._id === childId) {
+      return {
+        ...child,
+        assigneeId: assigneeId
+      };
+    }
+    return child;
+  });
+  
+  const updatedParent = {
+    ...parent.data,
+    children: updatedChildren
+  };
+  
+  const response = await api.put(`/components/${parentId}`, updatedParent);
   return response.data;
 };

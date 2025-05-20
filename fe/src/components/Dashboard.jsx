@@ -11,9 +11,12 @@ import {
   updateEndpoint, 
   deleteEndpoint, 
   createDatabaseChange,
+  updateDatabaseChange,
   fetchFeatureComponents,
   fetchFeatureEndpoints,
-  fetchFeatureDatabaseChanges
+  fetchFeatureDatabaseChanges,
+  markDatabaseChangeCompleted,
+  toggleEndpointCompletion
 } from '../api';
 import { ArrowUp } from 'lucide-react';
 import { useFeatures } from '../context/FeatureContext';
@@ -106,10 +109,30 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       
       setLocalEndpoints(filteredEndpoints);
       setEndpoints(filteredEndpoints);
-      setSelectedEndpoint(null);
-      setCurrentView(VIEW_TYPES.COMPONENTS);
+      
+      // If we're deleting the currently selected endpoint, close the detail view
+      if (selectedEndpoint && selectedEndpoint._id === id) {
+        setSelectedEndpoint(null);
+        setCurrentView(VIEW_TYPES.COMPONENTS);
+      }
     } catch (error) {
       console.error('Error deleting endpoint:', error);
+    }
+  };
+
+  const handleToggleEndpointCompletion = async (id) => {
+    try {
+      const result = await toggleEndpointCompletion(id);
+      
+      // Update the endpoints list with the toggled endpoint
+      const updatedEndpoints = endpoints.map(ep => 
+        ep._id === id ? result : ep
+      );
+      
+      setLocalEndpoints(updatedEndpoints);
+      setEndpoints(updatedEndpoints);
+    } catch (error) {
+      console.error('Error toggling endpoint completion:', error);
     }
   };
 
@@ -129,6 +152,36 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       setDatabaseChanges(updatedChanges);
     } catch (error) {
       console.error('Error adding database change:', error);
+    }
+  };
+
+  const handleUpdateDatabaseChange = async (id, updatedChange) => {
+    try {
+      const updated = await updateDatabaseChange(id, updatedChange);
+      const updatedChanges = databaseChanges.map(change => 
+        change._id === id ? updated : change
+      );
+      
+      setLocalDatabaseChanges(updatedChanges);
+      setDatabaseChanges(updatedChanges);
+    } catch (error) {
+      console.error('Error updating database change:', error);
+    }
+  };
+
+  const handleToggleDatabaseChangeCompletion = async (id, completed) => {
+    try {
+      const result = await markDatabaseChangeCompleted(id, completed);
+      
+      // Update the database changes list with the toggled change
+      const updatedChanges = databaseChanges.map(change => 
+        change._id === id ? result : change
+      );
+      
+      setLocalDatabaseChanges(updatedChanges);
+      setDatabaseChanges(updatedChanges);
+    } catch (error) {
+      console.error('Error toggling database change completion:', error);
     }
   };
   
@@ -172,18 +225,21 @@ const Dashboard = ({ components: initialComponents, endpoints: initialEndpoints,
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <UIMockup onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.MOCKUP)} />
-      <APIEndpoints 
-        endpoints={endpoints} 
-        onAddEndpoint={handleAddEndpoint} 
-        onSelectEndpoint={handleSelectEndpoint}
-        onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
-      />
-      <DatabaseChanges 
-        changes={databaseChanges} 
-        onAddChange={handleAddDatabaseChange} 
-        onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
-      />
+        <UIMockup onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.MOCKUP)} />
+        <APIEndpoints 
+          endpoints={endpoints} 
+          onAddEndpoint={handleAddEndpoint} 
+          onSelectEndpoint={handleSelectEndpoint}
+          onDeleteEndpoint={handleDeleteEndpoint}
+          onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
+        />
+        <DatabaseChanges 
+          changes={databaseChanges} 
+          onAddChange={handleAddDatabaseChange}
+          onUpdateChange={handleUpdateDatabaseChange}
+          onToggleCompletion={handleToggleDatabaseChangeCompletion}
+          onExternalLinkClick={() => handleExternalLinkClick(VIEW_TYPES.COMPONENTS)}
+        />
       </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

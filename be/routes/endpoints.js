@@ -1,3 +1,5 @@
+// be/routes/endpoints.js (updated with toggle completion)
+
 const express = require('express');
 const Endpoint = require('../models/Endpoint');
 
@@ -53,6 +55,19 @@ router.put('/:id', (req, res) => {
   Endpoint.update(req.params.id, endpointData, (err, endpoint) => {
     if (err) {
       return res.status(500).json({ error: 'Error updating endpoint' });
+    }
+    if (!endpoint) {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+    res.json(endpoint);
+  });
+});
+
+// Toggle endpoint completion status
+router.patch('/:id/toggle-completion', (req, res) => {
+  Endpoint.toggleCompletion(req.params.id, (err, endpoint) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error toggling completion status' });
     }
     if (!endpoint) {
       return res.status(404).json({ error: 'Endpoint not found' });

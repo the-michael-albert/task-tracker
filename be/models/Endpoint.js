@@ -1,3 +1,5 @@
+// be/models/Endpoint.js (modified)
+
 const Datastore = require('nedb');
 const path = require('path');
 
@@ -15,6 +17,8 @@ db.count({}, (err, count) => {
         path: '/api/auth/endpoint',
         featureId: null, // Will be updated with initial feature ID
         queryParams: [],
+        description: 'Authentication endpoint for user login', // Added description
+        completed: false, // Added completed field
         requestBody: '{\n  "json": {}\n}',
         responseBody: '{\n  "json": {}\n}',
         createdAt: new Date(),
@@ -29,6 +33,8 @@ db.count({}, (err, count) => {
           { key: 'limit', value: '10' },
           { key: 'filter', value: 'org' }
         ],
+        description: 'Retrieves user authentication status', // Added description
+        completed: false, // Added completed field
         requestBody: '{}',
         responseBody: '{}',
         createdAt: new Date(),
@@ -77,6 +83,8 @@ const Endpoint = {
   create: (endpointData, callback) => {
     const endpoint = {
       ...endpointData,
+      description: endpointData.description || '', // Default to empty string if not provided
+      completed: endpointData.completed || false, // Default to false if not provided
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -94,6 +102,26 @@ const Endpoint = {
         db.findOne({ _id: id }, callback);
       }
     );
+  },
+
+  // Toggle completion status
+  toggleCompletion: (id, callback) => {
+    db.findOne({ _id: id }, (err, endpoint) => {
+      if (err) return callback(err);
+      if (!endpoint) return callback(new Error('Endpoint not found'));
+      
+      const completed = !endpoint.completed;
+      
+      db.update(
+        { _id: id },
+        { $set: { completed, updatedAt: new Date() } },
+        {},
+        (err) => {
+          if (err) return callback(err);
+          db.findOne({ _id: id }, callback);
+        }
+      );
+    });
   },
 
   // Delete an endpoint
